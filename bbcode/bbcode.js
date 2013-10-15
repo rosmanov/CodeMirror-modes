@@ -8,7 +8,7 @@
 
 CodeMirror.defineMode("bbcode", function(config) {
   var settings, reTags, reUnaryTags, reTagsWithVal, reLink, openTags = [], m;
-  
+
   settings = {
     bbCodeTags: "b i u s img quote code list table  tr td",
     bbCodeUnaryTags: "* :-) hr cut",
@@ -41,42 +41,59 @@ CodeMirror.defineMode("bbcode", function(config) {
   reTagsWithVal = new RegExp("^\\[(" + escapeRegEx(settings.bbCodeTagsWithVal).split(" ").join("|") + ")(?:[^\\]]*)\\]");
   reLink = /^(?:https?|s?ftp)\:\/\/[^\s\[\]]+/;
 
-  return {
-    token: function(stream, state) {
-      if (stream.eatSpace()) return null;
+  var tokenizer = function (stream) {
+    if (stream.eatSpace()) return null;
 
-      if (stream.match('[', false)) {
-        stream.eatWhile(/[^[]/);
+    if (stream.match('[', false)) {
+      stream.eatWhile(/[^\[]/);
 
-        if (m = stream.match(reTags, true)) {
-          if (settings.bbCodeErrors) {
-            if (m[1] == '/') {
-              if (openTags.length && openTags[openTags.length - 1] != m[2])
-                return "error";
-              openTags.pop(m[2]);
-            } else {
-              openTags.push(m[2]);
+      if (m = stream.match(reTags, true)) {
+        if (settings.bbCodeErrors) {
+          if (m[1] == '/') {
+            if (openTags.length && openTags[openTags.length - 1] != m[2]) {
+              return "error";
             }
+            openTags.pop(m[2]);
+          } else {
+            openTags.push(m[2]);
           }
-          return "tag";
         }
-
-        if (m = stream.match(reUnaryTags, true)) {
-          return "atom";
-        }
-
-        if (m = stream.match(reTagsWithVal, true)) {
-          if (settings.bbCodeErrors) {
-            openTags.push(m[1]);
-          }
-          return "tag";
-        }
-      } else if (stream.match(reLink, true)) {
-        return "link";
+        return "keyword";
       }
 
-      stream.next();
-      return null;
+      if (m = stream.match(reUnaryTags, true)) {
+        return "atom";
+      }
+
+      if (m = stream.match(reTagsWithVal, true)) {
+        if (settings.bbCodeErrors) {
+          openTags.push(m[1]);
+        }
+        return "keyword";
+      }
+    } else if (stream.match(reLink, true)) {
+      return "link";
+    }
+
+    stream.next();
+    return null;
+  };
+
+  return {
+    startState: function() {
+      return {
+        tokenize: tokenizer,
+        mode: "bbcode"
+      };
+    },
+    copyState: function(state) {
+      return {
+        tokenize: state.tokenize,
+        mode: state.mode
+      };
+    },
+    token: function(stream, state) {
+      return tokenizer(stream, state);
     }
   };
 });
