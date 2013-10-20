@@ -5,14 +5,17 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
 
   settings = {
     rightDelimiter: ']',
-    leftDelimiter: '['
+    leftDelimiter: '[',
+    bbCodeLiteral: 'literal'
   };
-
   if (config.hasOwnProperty("leftDelimiter")) {
     settings.leftDelimiter = config.leftDelimiter;
   }
   if (config.hasOwnProperty("rightDelimiter")) {
     settings.rightDelimiter = config.rightDelimiter;
+  }
+  if (config.hasOwnProperty("bbCodeLiteral")) {
+    settings.bbCodeLiteral = config.bbCodeLiteral;
   }
 
   function escapeRegExp(s) {
@@ -21,7 +24,9 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
 
   regs = {
     hasLeftDelimeter: new RegExp(".*" + escapeRegExp(settings.leftDelimiter)),
-    htmlHasLeftDelimeter: new RegExp("[^\<\>]*" + escapeRegExp(settings.leftDelimiter))
+    htmlHasLeftDelimeter: new RegExp("[^\<\>]*" + escapeRegExp(settings.leftDelimiter)),
+    literalOpen: new RegExp(escapeRegExp("[" + settings.bbCodeLiteral + "]")),
+    literalClose: new RegExp(escapeRegExp("[/" + settings.bbCodeLiteral + "]"))
   };
 
   helpers = {
@@ -53,12 +58,12 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
 
   parsers = {
     html: function(stream, state) {
-      if (stream.match(regs.htmlHasLeftDelimeter, false) && state.htmlMixedState.htmlState.tagName === null) {
+      if (!state.inLiteral && stream.match(regs.htmlHasLeftDelimeter, false) && state.htmlMixedState.htmlState.tagName === null) {
         state.tokenize = parsers.bbcode;
         state.localMode = bbcodeMode;
         state.localState = bbcodeMode.startState(htmlMixedMode.indent(state.htmlMixedState, ""));
         return helpers.maybeBackup(stream, settings.leftDelimiter, bbcodeMode.token(stream, state.localState));
-      } else if (stream.match(settings.leftDelimiter, false)) {
+      } else if (!state.inLiteral && stream.match(settings.leftDelimiter, false)) {
         state.tokenize = parsers.bbcode;
         state.localMode = bbcodeMode;
         state.localState = bbcodeMode.startState(htmlMixedMode.indent(state.htmlMixedState, ""));
@@ -73,7 +78,8 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
         state.tokenize = parsers.html;
         state.localMode = htmlMixedMode;
         state.localState = state.htmlMixedState;
-        return "keyword";
+        return "tag";
+        //return bbcodeMode.token(stream, state);
       }
 
       return helpers.maybeBackup(stream, settings.rightDelimiter, bbcodeMode.token(stream, state.localState));
@@ -101,7 +107,8 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
         localMode: null,
         localState: null,
         htmlMixedState: state,
-        tokenize: null
+        tokenize: null,
+        inLiteral: false
       };
     },
 
@@ -115,19 +122,36 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
         tokenize: state.tokenize,
         localMode: state.localMode,
         localState: local,
-        htmlMixedState: CodeMirror.copyState(htmlMixedMode, state.htmlMixedState)
+        htmlMixedState: CodeMirror.copyState(htmlMixedMode, state.htmlMixedState),
+        inLiteral: state.inLiteral
       };
     },
 
     token: function(stream, state) {
+      if (stream.match("[", false)) {
+        if (!state.inLiteral && stream.match(regs.literalOpen, true)) {
+          state.inLiteral = true;
+          return "keyword";
+        } else if (state.inLiteral && stream.match(regs.literalClose, true)) {
+          state.inLiteral = false;
+          return "keyword";
+        }
+      }
+      if (state.inLiteral && state.localState != state.htmlMixedState) {
+        state.tokenize = parsers.html;
+        state.localMode = htmlMixedMode;
+        state.localState = state.htmlMixedState;
+      }
+
       var style = (state.tokenize || state.token)(stream, state);
       return style;
     },
 
     indent: function(state, textAfter) {
       if (state.localMode == bbcodeMode
-         || regs.hasLeftDelimeter.test(textAfter)) {
-        return CodeMirror.Pass;
+          || (state.inLiteral && !state.localMode)
+        || regs.hasLeftDelimeter.test(textAfter)) {
+          return CodeMirror.Pass;
       }
       return htmlMixedMode.indent(state.htmlMixedState, textAfter);
     },

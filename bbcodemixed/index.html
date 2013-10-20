@@ -31,13 +31,14 @@
 <form><textarea id="code" name="code">
 <html>
 <head>
-  <title>{$title|htmlspecialchars|truncate:30}</title>
+  <title>[page_title]</title>
 </head>
 <body class="[class name='body']">
   [b]bold[/b]
   [/b]
+  [literal]
   <script type="text/javascript">//<![CDATA[
-    var a = ['bbcode' : 'is active [b]here[/b]' ];
+    var a = ['bbcode' : 'is not active [b]here[/b]' ];
     var myCodeMirror = CodeMirror.fromTextArea(document.getElementById("code"), {
       mode           : "bbcodemixed",
       tabSize        : 2,
@@ -47,6 +48,7 @@
     });
     // ]]>
   </script>
+  [/literal]
   <style>
     /* CSS content 
     [b]bbcode[/b] */
@@ -80,12 +82,34 @@
 
     [table] [tr] [td]table data[/td] [/tr] [/table]
 
-    [code]Invalid 1[/b]
-    [unknown]Invalid 1[/unknown]
+    <h2>this is H2 tag</h2>
+    <p>This is a part of one snippet</p>
+    <div id="homeBlocks" class="clearfix">
 
-    [brackets][opening[/brackets]
-    [brackets]closing][/brackets]
-    [brackets][unmatched][/brackets]
+      <div id="bioBlock" class="placed featured-image-wrapper brick">
+        <div class="caption">[home_content]</div>
+      </div>
+      [pageImage type="medium" link="url" show="99" form="home-images" xhtml="yes"]
+
+    </div>
+    [if_data]
+    <div class="contact-bar hidden-phone pull-right">
+      <!-- <span class="sitePhone"><b>CALL NOW: [sitePhone]</b></span> -->
+      %%[contactBar]%%
+
+    </div><!-- END contact-bar -->
+    [/if_data]
+
+    [if_data][contactBar][/if_data]
+
+    [if_data]soemthing here %%[contactBar]%% and after[/if_data]
+
+    [if_data]<div class="contact-bar hidden-phone pull-right"><!-- <span
+        class="sitePhone"><b>CALL NOW: [sitePhone]</b></span>
+      -->%%[contactBar]%%</div><!-- END contact-bar -->[/if_data]
+
+    [if_data]<img src="%%[logoPath]%%" alt="[siteTitle]"
+    />[else_if_data][siteTitle][/if_data]
 
   </body>
   <!-- R.O. -->
