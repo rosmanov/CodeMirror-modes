@@ -4,16 +4,8 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
   bbcodeMode = CodeMirror.getMode(config, "bbcode"),
 
   settings = {
-    rightDelimiter: ']',
-    leftDelimiter: '[',
     bbCodeLiteral: 'literal'
   };
-  if (config.hasOwnProperty("leftDelimiter")) {
-    settings.leftDelimiter = config.leftDelimiter;
-  }
-  if (config.hasOwnProperty("rightDelimiter")) {
-    settings.rightDelimiter = config.rightDelimiter;
-  }
   if (config.hasOwnProperty("bbCodeLiteral")) {
     settings.bbCodeLiteral = config.bbCodeLiteral;
   }
@@ -23,8 +15,8 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
   }
 
   regs = {
-    hasLeftDelimeter: new RegExp(".*" + escapeRegExp(settings.leftDelimiter)),
-    htmlHasLeftDelimeter: new RegExp("[^\<\>]*" + escapeRegExp(settings.leftDelimiter)),
+    hasLeftDelimeter: /.*\[/,
+    htmlHasLeftDelimeter: /[^\<\>]*\[/,
     literalOpen: new RegExp(escapeRegExp("[" + settings.bbCodeLiteral + "]")),
     literalClose: new RegExp(escapeRegExp("[/" + settings.bbCodeLiteral + "]"))
   };
@@ -62,19 +54,19 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
         state.tokenize = parsers.bbcode;
         state.localMode = bbcodeMode;
         state.localState = bbcodeMode.startState(htmlMixedMode.indent(state.htmlMixedState, ""));
-        return helpers.maybeBackup(stream, settings.leftDelimiter, bbcodeMode.token(stream, state.localState));
-      } else if (!state.inLiteral && stream.match(settings.leftDelimiter, false)) {
+        return helpers.maybeBackup(stream, "[", bbcodeMode.token(stream, state.localState));
+      } else if (!state.inLiteral && stream.match("[", false)) {
         state.tokenize = parsers.bbcode;
         state.localMode = bbcodeMode;
         state.localState = bbcodeMode.startState(htmlMixedMode.indent(state.htmlMixedState, ""));
-        return helpers.maybeBackup(stream, settings.leftDelimiter, bbcodeMode.token(stream, state.localState));
+        return helpers.maybeBackup(stream, "[", bbcodeMode.token(stream, state.localState));
       }
       return htmlMixedMode.token(stream, state.htmlMixedState);
     },
 
     bbcode: function(stream, state) {
-      if (stream.match(settings.rightDelimiter, false)) {
-        stream.eat(settings.rightDelimiter);
+      if (stream.match("]", false)) {
+        stream.eat("]");
         state.tokenize = parsers.html;
         state.localMode = htmlMixedMode;
         state.localState = state.htmlMixedState;
@@ -82,7 +74,7 @@ CodeMirror.defineMode("bbcodemixed", function(config) {
         //return bbcodeMode.token(stream, state);
       }
 
-      return helpers.maybeBackup(stream, settings.rightDelimiter, bbcodeMode.token(stream, state.localState));
+      return helpers.maybeBackup(stream, "]", bbcodeMode.token(stream, state.localState));
     },
 
     inBlock: function(style, terminator) {
